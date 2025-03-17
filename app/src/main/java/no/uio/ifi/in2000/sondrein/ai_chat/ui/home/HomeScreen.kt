@@ -8,36 +8,30 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.launch
-
-import androidx.compose.ui.input.key.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
-import no.uio.ifi.in2000.sondrein.ai_chat.data.askQuestion
 import no.uio.ifi.in2000.sondrein.ai_chat.ui.loader.Loader
 
 @Composable
 fun HomeScreen() {
-    val context = LocalContext.current
+    val homeViewModel: HomeViewModel = viewModel()
+    val uiState by homeViewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
-    var response by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(
@@ -65,9 +59,7 @@ fun HomeScreen() {
                     if (keyEvent.type == KeyEventType.KeyUp && keyEvent.key == Key.Enter) {
                         keyboardController?.hide()
                         coroutineScope.launch {
-                            isLoading = true
-                            response = withContext(Dispatchers.IO) { askQuestion(context, input) }
-                            isLoading = false
+                            homeViewModel.askQuestion(input)
                         }
                         true
                     } else {
@@ -82,9 +74,7 @@ fun HomeScreen() {
                 onDone = {
                     keyboardController?.hide()
                     coroutineScope.launch {
-                        isLoading = true
-                        response = withContext(Dispatchers.IO) { askQuestion(context, input) }
-                        isLoading = false
+                        homeViewModel.askQuestion(input)
                     }
                 }
             )
@@ -96,9 +86,7 @@ fun HomeScreen() {
             onClick = {
                 keyboardController?.hide()
                 coroutineScope.launch {
-                    isLoading = true
-                    response = withContext(Dispatchers.IO) { askQuestion(context, input) }
-                    isLoading = false
+                    homeViewModel.askQuestion(input)
                 }
             },
             modifier = Modifier.fillMaxWidth(0.6f)
@@ -108,7 +96,7 @@ fun HomeScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (isLoading) {
+        if (uiState.isLoading) {
             Loader()
         } else {
             Box(
@@ -119,7 +107,7 @@ fun HomeScreen() {
                     .verticalScroll(scrollState)
             ) {
                 MarkdownText(
-                    markdown = response,
+                    markdown = uiState.response,
                     modifier = Modifier.padding(8.dp),
                     style = MaterialTheme.typography.bodyMedium
                         .copy(fontSize = 16.sp)
@@ -128,3 +116,4 @@ fun HomeScreen() {
         }
     }
 }
+
